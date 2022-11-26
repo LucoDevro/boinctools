@@ -16,22 +16,29 @@ do
 	boincstatus=$(boinccmd --get_cc_status | grep -A1 'CPU' | grep 'suspended')
 	status=$(boinccmd --get_cc_status | grep -A1 'GPU' | grep 'suspended')
 	temp=$(nvidia-settings -q gpucoretemp | grep -Eo -m1 "[0-9]{2}")
-	echo -e "BOINC status:\t$boincstatus\nGPU status:\t$status\nGPU temperature:\t$temp\n"
-	if [[ $status == *"not"* ]] && [[ $boincstatus == *"not"* ]]
+	echo -e "BOINC status:\t$boincstatus\nGPU status:\t$status\nGPU temperature:\t$temp"
+	echo -e "BOINC GPU PID:\t$pid\n"
+	if [[ -z "$pid" ]]
 	then
-		echo -ne 'Stopping GPU workload...\nPress any key to stop throttling:\t'
-		kill -STOP $pid
+		echo -ne 'No BOINC GPU process detected...\nPress any key to stop the throttler:\t'
 		sleep $(($pause*$interval))
-		echo -e '\nResuming GPU workload...'
-		kill -CONT $pid
 	else
-		echo -ne 'GPU for BOINC is paused by another process...\nPress any key to stop the throttler:\t'
-		sleep $(($interval*$pause))
+		if [[ $status == *"not"* ]] && [[ $boincstatus == *"not"* ]]
+		then
+			echo -ne 'Stopping GPU workload...\nPress any key to stop throttling:\t'
+			kill -STOP $pid
+			sleep $(($pause*$interval))
+			echo -e '\nResuming GPU workload...'
+			kill -CONT $pid
+		else
+			echo -ne 'GPU for BOINC is paused by another process...\nPress any key to stop the throttler:\t'
+			sleep $(($pause*$interval))
+		fi
 	fi
 	read -n 1 -t $interval
 	if [ $? = 0 ]
 	then
-		echo -ne 'Throttling is now stopped and BOINC has got full power again, if allowed.\nPress any key to confirm this action...\t'
+		echo -ne 'Throttling will stop now and BOINC will get full power.\nPress any key to confirm this action...\t'
 		read -n 1 -t 10
 		if [ $? = 0 ]
 		then
